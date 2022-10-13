@@ -44,11 +44,12 @@
 
 #include <dlfcn.h>
 
+static void *cxi_handle = NULL;
+static bool cxi_avail = false;
+
 #include "libcxi/libcxi.h"
 
 /* Global variables */
-static void *cxi_handle = NULL;
-static bool cxi_avail = false;
 static struct cxil_dev **cxi_devs;
 static int cxi_ndevs = 0;
 
