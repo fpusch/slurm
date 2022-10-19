@@ -36,7 +36,7 @@ AC_DEFUN([X_AC_HPE_SLINGSHOT],
     for _x_ac_hpe_ss_dir in "${_x_ac_hpe_ss_dirs@<:@@@:>@}"; do
       cflags_save="$CFLAGS"
       HPE_SLINGSHOT_CFLAGS="-I$_x_ac_hpe_ss_dir/include"
-      CFLAGS="$HPE_SLINGSHOT_CFLAGS $CFLAGS"
+      CFLAGS="$HPE_SLINGSHOT_CFLAGS"
       AC_CHECK_HEADER([libcxi/libcxi.h], [ac_hpe_ss_h=yes], [ac_hpe_ss_h=no])
       CFLAGS="$cflags_save"
 
@@ -45,7 +45,7 @@ AC_DEFUN([X_AC_HPE_SLINGSHOT],
 
       # ldflags_save="$LDFLAGS"
       # HPE_SLINGSHOT_LIBS="-L$_x_ac_hpe_ss_dir/lib64"
-      # LDFLAGS="$HPE_SLINGSHOT_LIBS $LDFLAGS"
+      # LDFLAGS="$HPE_SLINGSHOT_LIBS"
       # AC_CHECK_LIB([cxi], [cxil_get_device_list], [ac_hpe_ss_l=yes], [ac_hpe_ss_l=no])
       # LDFLAGS="$ldflags_save"
 
