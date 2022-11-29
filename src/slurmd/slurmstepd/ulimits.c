@@ -37,6 +37,8 @@
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA.
 \*****************************************************************************/
 
+#define _GNU_SOURCE /* Required for prlimit */
+
 #include "config.h"
 
 #include <stdlib.h>
@@ -85,7 +87,7 @@ static int _set_limit(char **env, slurm_rlimits_info_t *rli);
  * Run as normal user to disable setuid() and permit a core file to be written.
  */
 
-extern void set_user_limits(stepd_step_rec_t *step)
+extern void set_user_limits(stepd_step_rec_t *step, pid_t pid)
 {
 #ifdef RLIMIT_AS
 #define SLURM_RLIMIT_VSIZE RLIMIT_AS
@@ -102,7 +104,7 @@ extern void set_user_limits(stepd_step_rec_t *step)
 	rlim_t task_mem_bytes;
 	int rlimit_rc;
 
-	if (getrlimit(RLIMIT_CPU, &r) == 0) {
+	if (prlimit(pid, RLIMIT_CPU, NULL, &r) == 0) {
 		if (r.rlim_max != RLIM_INFINITY) {
 			error("Slurm process CPU time limit is %d seconds",
 			      (int) r.rlim_max);
@@ -124,22 +126,22 @@ extern void set_user_limits(stepd_step_rec_t *step)
 	 * node and not per process, but hopefully this is better than
 	 * nothing).  */
 #ifdef RLIMIT_RSS
-	rlimit_rc = getrlimit(RLIMIT_RSS, &r);
+	rlimit_rc = prlimit(pid, RLIMIT_RSS, 0, &r);
 	if ((task_mem_bytes) && !rlimit_rc && (r.rlim_max > task_mem_bytes)) {
 		r.rlim_max =  r.rlim_cur = task_mem_bytes;
-		if (setrlimit(RLIMIT_RSS, &r)) {
+		if (prlimit(pid, RLIMIT_RSS, &r, NULL)) {
 			/* Indicates that limit has already been exceeded */
-			fatal("setrlimit(RLIMIT_RSS, %"PRIu64" MB): %m",
+			fatal("prlimit(RLIMIT_RSS, %"PRIu64" MB): %m",
 			      step->step_mem);
 		} else
 			debug2("Set task rss(%"PRIu64" MB)", step->step_mem);
 		if (get_log_level() >= LOG_LEVEL_DEBUG2) {
-			getrlimit(RLIMIT_RSS, &r);
-			debug2("Task RSS limits from getrlimit: rlim_cur:%lu rlim_max:%lu",
+			prlimit(pid, RLIMIT_RSS, NULL, &r);
+			debug2("Task RSS limits from prlimit: rlim_cur:%lu rlim_max:%lu",
 			       r.rlim_cur, r.rlim_max);
 		}
 	} else if (rlimit_rc) {
-		error("getrlimit(RLIMIT_RSS,..) failed with %m");
+		error("prlimit(RLIMIT_RSS,..) failed with %m");
 	} else {
 		debug2("Not setting task rss rlimit, task bytes: %lu, rlimit_max: %lu",
 		       task_mem_bytes, r.rlim_max);
@@ -147,24 +149,24 @@ extern void set_user_limits(stepd_step_rec_t *step)
 #endif
 
 #ifdef SLURM_RLIMIT_VSIZE
-	rlimit_rc = getrlimit(SLURM_RLIMIT_VSIZE, &r);
+	rlimit_rc = prlimit(pid, SLURM_RLIMIT_VSIZE, NULL, &r);
 	if ((task_mem_bytes) && slurm_conf.vsize_factor && !rlimit_rc &&
 	    (r.rlim_max > task_mem_bytes)) {
 		r.rlim_max = task_mem_bytes * (slurm_conf.vsize_factor / 100.0);
 		r.rlim_cur = r.rlim_max;
-		if (setrlimit(SLURM_RLIMIT_VSIZE, &r)) {
+		if (prlimit(pid, SLURM_RLIMIT_VSIZE, &r, NULL)) {
 			/* Indicates that limit has already been exceeded */
-			fatal("setrlimit(%s, %"PRIu64" MB): %m",
+			fatal("prlimit(%s, %"PRIu64" MB): %m",
 			      SLURM_RLIMIT_VNAME, step->step_mem);
 		} else
 			debug2("Set task vsize(%"PRIu64" MB)", step->step_mem);
 		if (get_log_level() >= LOG_LEVEL_DEBUG2) {
-			getrlimit(SLURM_RLIMIT_VSIZE, &r);
+			prlimit(pid, SLURM_RLIMIT_VSIZE, NULL, &r);
 			debug2("task VSIZE limits: rlim_cur:%lu rlim_max:%lu",
 			       r.rlim_cur, r.rlim_max);
 		}
 	} else if (rlimit_rc) {
-		error("getrlimit(SLURM_RLIMIT_VSIZE,,..) failed with %m");
+		error("prlimit(SLURM_RLIMIT_VSIZE,,..) failed with %m");
 	} else {
 		debug2("Not setting task vsize rlimit, task bytes: %lu, rlimit_max: %lu",
 		       task_mem_bytes, r.rlim_max);
