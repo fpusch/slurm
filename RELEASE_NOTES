@@ -52,6 +52,8 @@ HIGHLIGHTS
  -- Add "[jobid.stepid]" prefix from slurmstepd and "slurmscriptd" prefix from
     slurmcriptd to Syslog logging. Previously was only happening when logging
     to a file.
+ -- Add LaunchParameters = ulimit_pam_adopt, which enables RLIMIT_RSS setting
+    adopted processes.
 
 CONFIGURATION FILE CHANGES (see appropriate man page for details)
 =====================================================================
