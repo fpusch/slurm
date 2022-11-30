@@ -327,41 +327,61 @@ int auth_g_verify(void *cred, char *auth_info)
 uid_t auth_g_get_uid(void *cred)
 {
 	cred_wrapper_t *wrap = (cred_wrapper_t *) cred;
+	uid_t uid = SLURM_AUTH_NOBODY;
 
 	if (!wrap || slurm_auth_init(NULL) < 0)
 		return SLURM_AUTH_NOBODY;
 
-	return (*(ops[wrap->index].get_uid))(cred);
+	slurm_rwlock_rdlock(&context_lock);
+	uid = (*(ops[wrap->index].get_uid))(cred);
+	slurm_rwlock_unlock(&context_lock);
+
+	return uid;
 }
 
 gid_t auth_g_get_gid(void *cred)
 {
 	cred_wrapper_t *wrap = (cred_wrapper_t *) cred;
+	gid_t gid = SLURM_AUTH_NOBODY;
 
 	if (!wrap || slurm_auth_init(NULL) < 0)
 		return SLURM_AUTH_NOBODY;
 
-	return (*(ops[wrap->index].get_gid))(cred);
+	slurm_rwlock_rdlock(&context_lock);
+	gid = (*(ops[wrap->index].get_gid))(cred);
+	slurm_rwlock_unlock(&context_lock);
+
+	return gid;
 }
 
 char *auth_g_get_host(void *cred)
 {
 	cred_wrapper_t *wrap = (cred_wrapper_t *) cred;
+	char *host = NULL;
 
 	if (!wrap || slurm_auth_init(NULL) < 0)
 		return NULL;
 
-	return (*(ops[wrap->index].get_host))(cred);
+	slurm_rwlock_rdlock(&context_lock);
+	host = (*(ops[wrap->index].get_host))(cred);
+	slurm_rwlock_unlock(&context_lock);
+
+	return host;
 }
 
 extern int auth_g_get_data(void *cred, char **data, uint32_t *len)
 {
 	cred_wrapper_t *wrap = cred;
+	int rc = SLURM_ERROR;
 
 	if (!wrap || slurm_auth_init(NULL) < 0)
 		return SLURM_ERROR;
 
-	return (*(ops[wrap->index].get_data))(cred, data, len);
+	slurm_rwlock_rdlock(&context_lock);
+	rc = (*(ops[wrap->index].get_data))(cred, data, len);
+	slurm_rwlock_unlock(&context_lock);
+
+	return rc;
 }
 
 int auth_g_pack(void *cred, buf_t *buf, uint16_t protocol_version)
@@ -415,10 +435,15 @@ unpack_error:
 
 int auth_g_thread_config(const char *token, const char *username)
 {
+	int rc = SLURM_ERROR;
 	if (slurm_auth_init(NULL) < 0)
 		return SLURM_ERROR;
 
-	return (*(ops[0].thread_config))(token, username);
+	slurm_rwlock_rdlock(&context_lock);
+	rc = (*(ops[0].thread_config))(token, username);
+	slurm_rwlock_unlock(&context_lock);
+
+	return rc;
 }
 
 void auth_g_thread_clear(void)
@@ -426,20 +451,26 @@ void auth_g_thread_clear(void)
 	if (slurm_auth_init(NULL) < 0)
 		return;
 
+	slurm_rwlock_rdlock(&context_lock);
 	(*(ops[0].thread_clear))();
+	slurm_rwlock_unlock(&context_lock);
 }
 
 char *auth_g_token_generate(int plugin_id, const char *username,
 			    int lifespan)
 {
+	char *token = NULL;
 	if (slurm_auth_init(NULL) < 0)
 		return NULL;
 
+	slurm_rwlock_rdlock(&context_lock);
 	for (int i = 0; i < g_context_num; i++) {
 		if (plugin_id == *(ops[i].plugin_id)) {
-			return (*(ops[i].token_generate))(username, lifespan);
+			token = (*(ops[i].token_generate))(username, lifespan);
+			break;
 		}
 	}
+	slurm_rwlock_unlock(&context_lock);
 
-	return NULL;
+	return token;
 }
