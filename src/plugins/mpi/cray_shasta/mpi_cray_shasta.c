@@ -35,6 +35,7 @@
 \*****************************************************************************/
 
 #include <fcntl.h>
+#include <inttypes.h>
 #include <limits.h>
 #include <signal.h>
 #include <sys/stat.h>
@@ -99,6 +100,7 @@ const uint32_t plugin_version = SLURM_VERSION_NUMBER;
 #define PMI_RANK_ENV "PMI_RANK"
 #define PMI_SIZE_ENV "PMI_SIZE"
 #define PMI_UNIVERSE_SIZE_ENV "PMI_UNIVERSE_SIZE"
+#define PMI_SHARED_SECRET_ENV "PMI_SHARED_SECRET"
 
 /* GLOBAL vars */
 char *appdir = NULL; // Application-specific spool directory
@@ -286,6 +288,29 @@ extern int mpi_p_slurmstepd_task(const mpi_plugin_task_info_t *job, char ***env)
 extern mpi_plugin_client_state_t *
 mpi_p_client_prelaunch(const mpi_plugin_client_info_t *job, char ***env)
 {
+	uint64_t shared_secret = 0;
+
+	/* Get a non-zero pseudo-random value */
+	do {
+		struct timeval tv;
+		ssize_t rv = 0;
+		int fd;
+
+		if ((fd = open("/dev/urandom", O_RDONLY)) >= 0) {
+			rv = read(fd, &shared_secret, sizeof(shared_secret));
+			close(fd);
+		}
+
+		if (rv != sizeof(shared_secret)) {
+			gettimeofday(&tv, NULL);
+			shared_secret = tv.tv_usec;
+		}
+	} while (shared_secret == 0);
+
+	/* Set PMI_SHARED_SECRET for PMI authentication */
+	env_array_overwrite_fmt(env, PMI_SHARED_SECRET_ENV, "%"PRIu64,
+				shared_secret);
+
 	/* only return NULL on error */
 	return (void *)0xdeadbeef;
 }
