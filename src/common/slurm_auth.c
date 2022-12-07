@@ -290,7 +290,10 @@ void *auth_g_create(int index, char *auth_info, uid_t r_uid,
 	if (slurm_auth_init(NULL) < 0)
 		return NULL;
 
+	slurm_rwlock_rdlock(&context_lock);
 	cred = (*(ops[index].create))(auth_info, r_uid, data, dlen);
+	slurm_rwlock_unlock(&context_lock);
+
 	if (cred)
 		cred->index = index;
 	return cred;
@@ -309,11 +312,16 @@ int auth_g_destroy(void *cred)
 int auth_g_verify(void *cred, char *auth_info)
 {
 	cred_wrapper_t *wrap = (cred_wrapper_t *) cred;
+	int rc = SLURM_ERROR;
 
 	if (!wrap || slurm_auth_init(NULL) < 0)
 		return SLURM_ERROR;
 
-	return (*(ops[wrap->index].verify))(cred, auth_info);
+	slurm_rwlock_rdlock(&context_lock);
+	rc = (*(ops[wrap->index].verify))(cred, auth_info);
+	slurm_rwlock_unlock(&context_lock);
+
+	return rc;
 }
 
 uid_t auth_g_get_uid(void *cred)
