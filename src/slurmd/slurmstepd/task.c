@@ -72,6 +72,7 @@
 #include "src/common/log.h"
 #include "src/common/plugstack.h"
 #include "src/common/run_command.h"
+#include "src/common/slurm_auth.h"
 #include "src/common/slurm_mpi.h"
 #include "src/common/strlcpy.h"
 #include "src/common/switch.h"
@@ -427,10 +428,17 @@ extern void exec_task(stepd_step_rec_t *job, int local_proc_id)
 		env_array_free(tmp_env);
 	}
 
+	/*
+	 * test7.21 calls slurm_load_job() as an example of weird things people
+	 * may do within a SPANK stack. That will deadlock if we don't drop the
+	 * lock here.
+	 */
+	auth_setuid_unlock();
 	if (spank_user_task(job, local_proc_id) < 0) {
 		error("Failed to invoke spank plugin stack");
 		_exit(1);
 	}
+	auth_setuid_lock();
 
 #ifdef WITH_SELINUX
 	if (setexeccon(job->selinux_context)) {
