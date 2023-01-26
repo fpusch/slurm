@@ -1,0 +1,3 @@
+#!/bin/bash
+# dummy executable simulating a MULTI_PROCESS_MULTI_FILE application
+date

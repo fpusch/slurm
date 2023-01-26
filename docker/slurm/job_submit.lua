@@ -19,7 +19,10 @@ MAX_COMPUTE_OSS_BANDWIDTH_MBS = 1000
 EXECUTABLE_STORAGE_MODE = {
     pwd = 11,
     hostname = 21,
-    date = 22
+    date = 22,
+    ior_sps = 11,
+    ior_mps = 21,
+    ior_mpm = 22
 }
 
 function slurm_job_submit(job_desc, part_list, submit_uid)
