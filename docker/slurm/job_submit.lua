@@ -59,10 +59,16 @@ function slurm_job_submit(job_desc, part_list, submit_uid)
 
     -- dummy command for now
     local command = "echo \"" .. pfl_cmd .. "\" > " .. pfl_dir .. "/cmd.txt"
-    local handle = io.popen(command)
-    local result = handle:read("*a")
-    handle:close()
-    slurm.log_user("slurm_job_submit: " .. result)
+    slurm.log_user("slurm_job_submit: os_cmd %s", command)
+
+    -- execute
+    local result = os.execute(command)
+    slurm.log_user("slurm_job_submit: " .. tostring(result))
+    if result then
+        slurm.log_user("slurm_job_submit: successfully set PFL configuration for mode " .. storage_mode)
+    else
+        slurm.log_user("slurm_job_submit: failed to set PFL configuration")
+    end
 
     return slurm.SUCCESS
 end
